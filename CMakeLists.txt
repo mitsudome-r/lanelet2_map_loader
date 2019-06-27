@@ -1,152 +1,107 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(lanelet_map_loader)
+project(lanelet2_map_loader)
 
+## Compile as C++11, supported in ROS Kinetic and newer
+add_compile_options(-std=c++17)
 
+## Find catkin macros and libraries
+## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
+## is used, also find other catkin packages
 
-set(LL_DIR /home/simon/work/catkin_ws/src/lanelet2)
-set(AW_DIR /home/simon/Autoware)
-set(autoware_msgs_DIR ${AW_DIR}/ros/install/autoware_msgs/share/autoware_msgs/cmake)
-
-find_package(autoware_msgs REQUIRED)
-
+#find_package(lanelet2_msgs REQUIRED)
 
 find_package(catkin REQUIRED COMPONENTS
+	lanelet2_extension
   roscpp
-  rospy
   std_msgs
-  tf
-#  message_generation
+	lanelet2_msgs
 )
 
-
-## from lanelet2/lanelet2_examples CMakeLists.txt
-set (MRT_PKG_VERSION 2.2.1)
-
-find_package(
-  mrt_cmake_modules REQUIRED
-  lanelet2 REQUIRED
-  )
-
-
-include(UseMrtStdCompilerFlags)
-include(UseMrtAutoTarget)
-include(GatherDeps)
-
-
-
-
-
-
-find_package(AutoDeps REQUIRED COMPONENTS ${DEPENDEND_PACKAGES})
-mrt_add_to_ide(README.md .gitlab-ci.yml)
-
-
-find_package(Eigen3 REQUIRED)
-
-add_definitions(-DPKG_DIR="${CMAKE_CURRENT_LIST_DIR}")
-
-
+###################################
+## catkin specific configuration ##
+###################################
+## The catkin_package macro generates cmake config files for your package
+## Declare things to be passed to dependent projects
+## INCLUDE_DIRS: uncomment this if your package contains header files
+## LIBRARIES: libraries you create in this project that dependent projects also need
+## CATKIN_DEPENDS: catkin_packages dependent projects also need
+## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-CATKIN_DEPENDS message_runtime roscpp rospy std_msgs geodesy
+ INCLUDE_DIRS include
+#  LIBRARIES lanelet2_map_loader
+ CATKIN_DEPENDS lanelet2_extension roscpp std_msgs lanelet2_msgs
 #  DEPENDS system_lib
 )
 
 ###########
 ## Build ##
 ###########
-
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-
-
-find_package (GeographicLib 1.34 REQUIRED)
-
-#find_package (PugiXML REQUIRED)
-
-include_directories (${GeographicLib_INCLUDE_DIRS})
-    add_definitions (${GeographicLib_DEFINITIONS})
-
-find_package(Boost COMPONENTS serialization system)
-    
-#include(rosbuild)
-#rosbuild_init()
-#rosbuild_genmsg()
-
+#
+# ## Specify additional locations of header files
+# ## Your package locations should be listed before other locations
 include_directories(
-# include
-/usr/include/eigen3
-${LL_DIR}/lanelet2_core/include
-${LL_DIR}/lanelet2_core/include/lanelet2_core
-${LL_DIR}/lanelet2_io/include
-${LL_DIR}/lanelet2_io/include/lanelet2_io
-${LL_DIR}/lanelet2_projection/include
-${LL_DIR}/lanelet2_projection/include/lanelet2_projection
-${LL_DIR}/lanelet2_traffic_rules/include
-${LL_DIR}/lanelet2_traffic_rules/include/lanelet2_traffic_rules
-${LL_DIR}/lanelet2_routing/include
-${LL_DIR}/lanelet2_routing/include/lanelet2_routing
-${mrt_INCLUDE_DIRS}
-${catkin_INCLUDE_DIRS}
-${AW_DIR}/ros/install/autoware_msgs/include
+  include
+  ${catkin_INCLUDE_DIRS}
 )
-
-
-link_directories(
-${mrt_LIBRARY_DIRS}
-)
-
-
-file (GLOB_RECURSE ll_io_src ${LL_DIR}/lanelet2_io/src/*.cpp)
-file (GLOB_RECURSE ll_core_src ${LL_DIR}/lanelet2_core/src/*.cpp)
-file (GLOB_RECURSE ll_core_h ${LL_DIR}/lanelet2_core/include/*.h)
-file (GLOB_RECURSE ll_tfr_src ${LL_DIR}/lanelet2_traffic_rules/src/*.cpp)
-file (GLOB_RECURSE ll_tfr_h ${LL_DIR}/lanelet2_traffic_rules/include/*.h)
-file (GLOB_RECURSE ll_rt_src ${LL_DIR}/lanelet2_routing/src/*.cpp)
-file (GLOB_RECURSE ll_rt_h ${LL_DIR}/lanelet2_routing/include/*.h)
-
-file (GLOB PUGI_DEFS /usr/include/pugi*.hpp)
-set(PUGI_LIB /usr/lib/x86_64-linux-gnu/libpugixml.so)
-
-
 
 add_executable(lanelet_map_loader_xml
-  src/lanelet_map_loader_xml.cpp src/rosUTM.cpp
-  src/libLaneletMap.cpp
-  ${LL_DIR}/lanelet2_projection/src/UTM.cpp
-  ${ll_io_src}
-  ${ll_core_src}
-  ${ll_core_h}
-  ${ll_tfr_src}
-  ${ll_tfr_h}
-  ${ll_rt_src}
-  ${ll_rt_h}
-  ${PUGI_DEFS}
+  src/lanelet_map_loader_xml.cpp
   )
 target_link_libraries(lanelet_map_loader_xml
   ${catkin_LIBRARIES}
-  ${GeographicLib_LIBRARIES}
-  ${PUGI_LIB}
-  ${Boost_LIBRARIES}
   )
 
-
 add_executable(lanelet_map_subscriber_xml
-  src/lanelet_map_subscriber_xml.cpp src/rosUTM.cpp
-  src/libLaneletMap.cpp
-  ${LL_DIR}/lanelet2_projection/src/UTM.cpp
-  ${ll_io_src}
-  ${ll_core_src}
-  ${ll_core_h}
-  ${ll_tfr_src}
-  ${ll_tfr_h}
-  ${ll_rt_src}
-  ${ll_rt_h}
-  ${PUGI_DEFS}
+  src/lanelet_map_subscriber_xml.cpp
   )
 target_link_libraries(lanelet_map_subscriber_xml
   ${catkin_LIBRARIES}
-  ${GeographicLib_LIBRARIES}
-  ${PUGI_LIB}
-  ${Boost_LIBRARIES}
   )
 
+#############
+## Install ##
+#############
+
+# all install targets should use catkin DESTINATION variables
+# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
+
+## Mark executable scripts (Python etc.) for installation
+## in contrast to setup.py, you can choose the destination
+# install(PROGRAMS
+#   scripts/my_python_script
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
+
+## Mark executables and/or libraries for installation
+install(TARGETS lanelet_map_loader_xml lanelet_map_subscriber_xml
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+## Mark cpp header files for installation
+# install(DIRECTORY include/${PROJECT_NAME}/
+#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+#   FILES_MATCHING PATTERN "*.h"
+#   PATTERN ".svn" EXCLUDE
+# )
+
+## Mark other files for installation (e.g. launch and bag files, etc.)
+# install(FILES
+#   # myfile1
+#   # myfile2
+#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+# )
+
+#############
+## Testing ##
+#############
+
+## Add gtest based cpp test target and link libraries
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_lanelet2_map_loader.cpp)
+# if(TARGET ${PROJECT_NAME}-test)
+#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
+# endif()
+
+## Add folders to be run by python nosetests
+# catkin_add_nosetests(test)

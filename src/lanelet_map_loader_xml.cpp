@@ -1,122 +1,88 @@
-#include "ros/ros.h"
-#include <tf/tf.h>
-#include <tf/transform_listener.h>
-#include <tf/transform_broadcaster.h>
-#include <sensor_msgs/CameraInfo.h>
-#include <geometry_msgs/TwistStamped.h>
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <ros/ros.h>
 
-#include <visualization_msgs/Marker.h>
-#include <visualization_msgs/MarkerArray.h>
-
-
-#include "std_msgs/String.h"
-#include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_io/Io.h>
-#include <lanelet2_io/io_handlers/Factory.h>
-#include <lanelet2_io/io_handlers/Writer.h>
-#include <lanelet2_io/io_handlers/OsmHandler.h>
-#include <lanelet2_io/io_handlers/OsmFile.h>
-#include <lanelet2_projection/UTM.h>
 #include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
-#include <lanelet2_core/primitives/LineString.h>
-#include <lanelet2_core/primitives/LineStringOrPolygon.h>
+#include <lanelet2_projection/UTM.h>
 
-#include <lanelet2_traffic_rules/TrafficRules.h>
-#include <lanelet2_traffic_rules/TrafficRulesFactory.h>
+#include <lanelet2_extension/projection/mgrs_projector.hpp>
+#include <lanelet2_extension/io/message_conversion.hpp>
+#include <lanelet2_msgs/MapXML.h>
+#include <lanelet2_msgs/MapBin.h>
 
+#define MGRS_PROJECTOR "mgrs"
+#define UTM_PROJECTOR "utm"
 
-
-#include <lanelet2_routing/Route.h>
-#include <lanelet2_routing/RoutingCost.h>
-#include <lanelet2_routing/RoutingGraph.h>
-#include <lanelet2_routing/RoutingGraphContainer.h>
-
-#include <lanelet2_core/geometry/BoundingBox.h>
-#include <lanelet2_core/geometry/Lanelet.h>
-#include <lanelet2_core/geometry/Point.h>
-
-
-
-
-
-#include <lanelet2_core/primitives/Lanelet.h>
-#include <Eigen/Eigen>
-
-#include <autoware_msgs/Signals.h>
-
-#include <cstdio>
-
-#include <sstream>
-#include "rosUTM.h"
-#include "libLaneletMap.h"
-
-#include <lanelet_msgs/PointArray.h>
-#include <lanelet_msgs/MapXML.h>
-#include <pugixml.hpp>
-
-#include <unistd.h>
-#include <ios>
-#include <iostream>
-#include <fstream>
-#include <string>
-//using namespace lanelet;
-
-#define TL_BY_LANELET 0
-#define TL_BY_NEAREST 1
-
-#define signalLampRadius 0.3
-
-static std::string camera_id_str;
-
-
-//std::string example_map_path = "/home/simon/work/catkin_ws/src/lanelet2/lanelet2_maps/res/mapping_example.osm";
-std::string example_map_path = "/home/simon/work/peoria_data/map/Lanelet2/Peoria_0301_2019_fixed.osm";
-
-
-//-------------------------------------------------------------------------
-//
-//
-//
-//-------------------------------------------------------------------------
+void printUsage()
+{
+  std::cout << "Usage:" << std::endl
+            << "rosrun lanelet_map_loader lanelet_map_loader_xml _map_file:=<path to osm file>" << std::endl;
+}
 
 int main (int argc, char **argv)
 {
-
-  // UTM 1KM BLOCK
-  lanelet::Origin origin({0,0});
-
-  // origin not used in projector but projector template requires one
-  lanelet::projection::RosUtmProjector ros_projector(origin);
-  lanelet::ErrorMessages errors;
-  lanelet::LaneletMapPtr map = load(example_map_path, ros_projector, &errors);
- 
-  ros::init(argc, argv, "lanelet_map_loader");  
+  ros::init(argc, argv, "lanelet_map_loader");
   ros::NodeHandle rosnode;
-  
-  // publisher to visualise lanelet elements within rviz
-  ros::Publisher map_xml_pub = rosnode.advertise<lanelet_msgs::MapXML>("/lanelet_map_xml", 1, true);
+  ros::NodeHandle private_rosnode("~");
 
-  lanelet_msgs::MapXML map_xml_msg;
-  int status = lanelet_utils::Map::toXMLMsg(map, map_xml_msg, ros_projector);
+  std::string map_path = "";
+  std::string projector_type = MGRS_PROJECTOR;
+  lanelet2_msgs::MapXML map_xml_msg;
+  lanelet2_msgs::MapBin map_bin_msg;
 
+  double origin_latitude = 0;
+  double origin_longitude = 0;
 
-  ros::spinOnce();
-  // main loop
+  if(!private_rosnode.hasParam("map_file"))
+  {
+    ROS_FATAL_STREAM("failed find map_file parameter! No file to load");
+    printUsage();
+    return 1;
+  }
 
-  ros::Rate loop_rate(10);  
-  int loop_count = 0;
-       
-          map_xml_pub.publish(map_xml_msg);
+  private_rosnode.getParam("map_file", map_path);
+  private_rosnode.param<std::string>("projector", projector_type, MGRS_PROJECTOR);
 
-  while(ros::ok()) // && loop_count < 10)
+  std::shared_ptr<lanelet::Projector> projector_ptr;
+  if(projector_type == MGRS_PROJECTOR)
+  {
+    projector_ptr = std::make_shared<lanelet::projection::MGRSProjector>();
+    map_xml_msg.projector_type = lanelet2_msgs::MapXML::MGRS;
+  }
+  else if(projector_type == UTM_PROJECTOR)
+  {
+    if(!private_rosnode.hasParam("origin_latitude") || !private_rosnode.hasParam("origin_longitude"))
     {
- 
-      ros::spinOnce();
-      loop_count++;
+      ROS_FATAL_STREAM("You must specify origin_latitude and origin_longitude parameter in order to use utm projector");
+      return 1;
     }
-  
+    private_rosnode.param<double>("origin_latitude", origin_latitude, origin_latitude);
+    private_rosnode.param<double>("origin_longitude", origin_longitude, origin_longitude);
+    projector_ptr = std::make_shared<lanelet::projection::UtmProjector>(lanelet::Origin({origin_latitude, origin_longitude}));
+    map_xml_msg.projector_type = lanelet2_msgs::MapXML::UTM;
+    map_xml_msg.origin_lat = origin_latitude;
+    map_xml_msg.origin_lon = origin_longitude;
+  }
+  else
+  {
+    ROS_ERROR_STREAM( "Projector " << projector_type << "is not supported." << std::endl
+                   << "Using MGRS projector instead." << std::endl);
+    projector_ptr = std::make_shared<lanelet::projection::MGRSProjector>();
+    map_xml_msg.projector_type = lanelet2_msgs::MapXML::MGRS;
+  }
+
+  lanelet::ErrorMessages errors;
+  lanelet::LaneletMapPtr map = load(map_path, *projector_ptr, &errors);
+
+  // publisher to visualise lanelet elements within rviz
+  ros::Publisher map_xml_pub = rosnode.advertise<lanelet2_msgs::MapXML>("/lanelet_map_xml", 1, true);
+  ros::Publisher map_bin_pub = rosnode.advertise<lanelet2_msgs::MapBin>("/lanelet_map_bin", 1, true);
+
+  int status = lanelet_utils::Map::toXMLMsg(map, map_xml_msg, *projector_ptr);
+  lanelet_utils::Map::toBinMsg(map, map_bin_msg);
+  map_xml_pub.publish(map_xml_msg);
+  map_bin_pub.publish(map_bin_msg);
+
+  ros::spin();
+
   return 0;
 }
