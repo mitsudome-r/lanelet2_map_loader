@@ -50,10 +50,10 @@ target_link_libraries(lanelet_map_loader
   ${catkin_LIBRARIES}
   )
 
-add_executable(lanelet_map_subscriber_xml
-  src/lanelet_map_subscriber_xml.cpp
+add_executable(lanelet_map_subscriber
+  src/lanelet_map_subscriber.cpp
   )
-target_link_libraries(lanelet_map_subscriber_xml
+target_link_libraries(lanelet_map_subscriber
   ${catkin_LIBRARIES}
   )
 
@@ -72,7 +72,7 @@ target_link_libraries(lanelet_map_subscriber_xml
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS lanelet_map_loader lanelet_map_subscriber_xml
+install(TARGETS lanelet_map_loader lanelet_map_subscriber
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
