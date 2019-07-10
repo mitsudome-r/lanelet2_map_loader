@@ -43,10 +43,10 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(lanelet_map_loader_xml
-  src/lanelet_map_loader_xml.cpp
+add_executable(lanelet_map_loader
+  src/lanelet_map_loader.cpp
   )
-target_link_libraries(lanelet_map_loader_xml
+target_link_libraries(lanelet_map_loader
   ${catkin_LIBRARIES}
   )
 

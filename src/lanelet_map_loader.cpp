@@ -17,7 +17,7 @@
 void printUsage()
 {
   std::cout << "Usage:" << std::endl
-            << "rosrun lanelet_map_loader lanelet_map_loader_xml _map_file:=<path to osm file>" << std::endl;
+            << "rosrun lanelet_map_loader lanelet_map_loader _map_file:=<path to osm file>" << std::endl;
 }
 
 int main (int argc, char **argv)
