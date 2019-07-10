@@ -72,7 +72,7 @@ target_link_libraries(lanelet_map_subscriber_xml
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS lanelet_map_loader_xml lanelet_map_subscriber_xml
+install(TARGETS lanelet_map_loader lanelet_map_subscriber_xml
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
